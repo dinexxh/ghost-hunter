@@ -1403,6 +1403,7 @@
 
     /* theme toggle on the overlay cards */
     .themeToggle {
+      display: none !important; /* theme toggle removed — dark theme only */
       position: absolute;
       top: 15px;
       right: 15px;
@@ -1411,7 +1412,6 @@
       border: 1px solid var(--line);
       background: var(--iconbtn-bg);
       border-radius: 12px;
-      display: grid;
       place-items: center;
       cursor: pointer;
       color: var(--ink-2);
@@ -2176,23 +2176,19 @@
     }
 
     @keyframes repIn {
-      from {
-        opacity: 0
-      }
-
-      to {
-        opacity: 1
-      }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* theme button, restyled as a pixel chip */
     #reportOverlay .themeToggle {
+      display: none !important; /* removed */
       position: absolute;
       top: 34px;
       right: 34px;
       width: 62px;
       height: 62px;
-      display: grid;
+      /* display: grid; */
       place-items: center;
       color: var(--pk);
       background: none;
@@ -2683,7 +2679,9 @@
             </div>
 
             <div class="glass" id="controls">
+              <!-- theme toggle removed
               <button id="themeBtn" aria-label="Toggle theme"></button>
+              -->
               <button id="muteBtn" aria-label="Toggle sound">
                 <svg id="muteIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2734,7 +2732,9 @@
           </div>
 
           <div class="card px2" id="reportCard">
-            <!-- <button class="themeToggle px" aria-label="Toggle theme"></button> -->
+            <!-- theme toggle removed
+            <button class="themeToggle px" aria-label="Toggle theme"></button>
+            -->
 
             <div class="rep-badge px">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -2841,8 +2841,8 @@
       GHOST_RATIO: 0.35,
       // journey time (spawn -> bank), seconds, eased over the round (fast = harder)
       JOURNEY: { start: 3.6, end: 1.6 },   // snappy open, very fast finish
-      SPAWN: { start: 480, end: 180 },   // aggressive spawn rate
-      MAX_ALIVE: 130,
+      SPAWN: { start: 380, end: 140 },   // denser crowd throughout
+      MAX_ALIVE: 160,
       NEAR_SCALE: 3.4, FAR_SCALE: 0.5,
       UNIT: 1000000                        // ₹10 lakh per ghost / customer
     };
@@ -3183,8 +3183,8 @@
       if (now - State.lastSpawn > spawnGap()) {
         State.lastSpawn = now; spawn();
         const d = difficulty();
-        if (d > 0.45 && Math.random() < 0.45) spawn();        // second wave builds through the middle
-        if (d > 0.78 && Math.random() < 0.45) spawn();
+        if (d > 0.25 && Math.random() < 0.55) spawn();        // second wave builds earlier
+        if (d > 0.55 && Math.random() < 0.50) spawn();
       }      // third wave for a hectic finish
 
       const time = State.elapsed;
@@ -3285,12 +3285,18 @@
     // Scale overlay content to fit canvas.
     function fitEl(el, maxWfrac, maxHfrac, allowUp) {
       if (!el || el.offsetParent === null) return;
-      el.style.transform = 'none';
-      const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return;
+      // Measure at scale(1) without flashing: keep translateX(-50%) so layout stays centered
+      const prev = el.style.transform;
+      el.style.transformOrigin = 'center top';
+      el.style.transform = 'translateX(-50%) scale(1)';
+      const w = el.offsetWidth, h = el.offsetHeight;
+      if (!w || !h) { el.style.transform = prev || 'translateX(-50%)'; return; }
       let s = Math.min(BASE_W * maxWfrac / w, BASE_H * maxHfrac / h);
       if (!allowUp) s = Math.min(1, s);
-      el.style.transformOrigin = 'center top';
-      el.style.transform = 'translateX(-50%) scale(' + s.toFixed(4) + ')';
+      const next = 'translateX(-50%) scale(' + s.toFixed(4) + ')';
+      // Skip no-op updates (avoids flicker on resize / repeated layout)
+      if (prev === next) return;
+      el.style.transform = next;
     }
     function fitHome() {
       const f = document.querySelector('.a-frame'); const c = document.querySelector('.a-content');
@@ -3301,7 +3307,11 @@
       const s = Math.min(1, avail / h); c.style.transformOrigin = 'top center'; c.style.transform = 'scale(' + s.toFixed(4) + ')';
     }
     // Card scales down only to avoid overlapping bank art.
-    function fitReport() { fitEl(document.getElementById('reportCard'), 0.90, 0.70, false); }
+    function fitReport() {
+      // Only scale while the results screen is visible (prevents transform thrash)
+      if (!el.reportOverlay || el.reportOverlay.classList.contains('hidden')) return;
+      fitEl(document.getElementById('reportCard'), 0.92, 0.78, false);
+    }
     window.addEventListener('resize', layout, { passive: true });
     if (window.visualViewport) window.visualViewport.addEventListener('resize', layout, { passive: true });
 
@@ -3367,7 +3377,11 @@
       $('#repRankSub').textContent = r.sub;
       const cr = (c + m) > 0 ? c / (c + m) : 0;
       el.reportOverlay.classList.remove('hidden');
-      fitReport();   // scale the report card to fill the screen
+      // Fit after paint so card dimensions are stable (avoids result-screen glitch)
+      requestAnimationFrame(() => {
+        fitReport();
+        requestAnimationFrame(fitReport);
+      });
       armIdle();   // booth self-reset: return to the start screen if left unattended
       animateCount($('#repCaught'), c); animateCount($('#repMissed'), m); animateCount($('#repStopped'), s);
       // gauge
@@ -3423,7 +3437,8 @@
       try { localStorage.setItem('gh-theme', t); } catch (_) { }
     }
     function toggleTheme() { applyTheme(THEME === 'dark' ? 'light' : 'dark'); Sound.unlock(); Sound.ui(); }
-    document.addEventListener('click', e => { if (e.target.closest('#themeBtn, .themeToggle')) toggleTheme(); });
+    // theme toggle removed
+    // document.addEventListener('click', e => { if (e.target.closest('#themeBtn, .themeToggle')) toggleTheme(); });
 
     document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', e => e.preventDefault());
@@ -3432,9 +3447,8 @@
 
     // Init theme from localStorage or default dark.
     (function initTheme() {
-      let t = 'dark';   // default dark to flow from the arcade home
-      try { const s = localStorage.getItem('gh-theme'); if (s) t = s; } catch (_) { }
-      applyTheme(t);
+      // Dark theme only — light/dark toggle removed
+      applyTheme('dark');
     })();
     layout(); window.addEventListener('load', layout);
   </script>
