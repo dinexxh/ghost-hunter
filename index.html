@@ -670,9 +670,9 @@
       position: absolute;
       transform: translate(-50%, -50%);
       font-weight: 750;
-      font-size: 14px;
+      font-size: 24px;
       white-space: nowrap;
-      padding: 7px 14px;
+      padding: 12px 22px;
       border-radius: 999px;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
@@ -707,7 +707,7 @@
 
       18% {
         opacity: 1;
-        transform: translate(-50%, -64%) scale(1.04)
+        transform: translate(-50%, -64%) scale(1.12)
       }
 
       100% {
@@ -2840,8 +2840,8 @@
       DURATION: 60,
       GHOST_RATIO: 0.35,
       // journey time (spawn -> bank), seconds, eased over the round (fast = harder)
-      JOURNEY: { start: 6.4, end: 3.0 },   // calm open, genuinely fast finish
-      SPAWN: { start: 820, end: 320 },   // ms between spawns (denser late)
+      JOURNEY: { start: 4.8, end: 2.2 },   // faster open, punchy finish
+      SPAWN: { start: 620, end: 240 },   // denser spawns throughout
       MAX_ALIVE: 130,
       NEAR_SCALE: 3.4, FAR_SCALE: 0.5,
       UNIT: 1000000                        // ₹10 lakh per ghost / customer
