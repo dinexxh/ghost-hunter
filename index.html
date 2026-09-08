@@ -6,6 +6,7 @@
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#ffffff" />
+  
   <title>Ghost</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1428,8 +1429,9 @@
       background: #06070c;
       overflow: hidden;
       align-items: stretch;
-      justify-content: flex-start;
-      padding: 0;
+      justify-content: stretch;
+      padding: 0 !important;
+      inset: 0;
     }
 
     .arcade {
@@ -1461,7 +1463,10 @@
        since the embedded reference image already contains its own border, dots and mascot. */
     .arcade.ref-mode {
       padding: 0;
-      background: #000;
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: #06070c;
     }
     .arcade.ref-mode::before { display: none; }
 
@@ -1470,18 +1475,23 @@
       flex: 1;
       min-height: 0;
       min-width: 0;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 3;
+      background: #06070c;
     }
 
     .ref-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      max-width: 100%;
-      max-height: 100%;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
       padding: 0;
       margin: 0;
       border: 0;
@@ -1498,10 +1508,12 @@
 
     .ref-img {
       display: block;
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      object-fit: fill;
+      object-position: center center;
       -webkit-user-drag: none;
       user-select: none;
       pointer-events: none;
@@ -3264,17 +3276,29 @@
       const vw = Math.max(1, Math.round(vv ? vv.width : innerWidth));
       const vh = Math.max(1, Math.round(vv ? vv.height : innerHeight));
 
-      // Fit 1:2 master inside viewport without distortion.
-      const masterFit = Math.min(vw / MASTER_W, vh / MASTER_H);
-      const scale = masterFit * MASTER_SCALE;
-      const renderedW = BASE_W * scale;
-      const renderedH = BASE_H * scale;
+      // Hybrid scale:
+      // - Portrait phones near 1:2 (e.g. 1080×1920): fit HEIGHT fully, stretch WIDTH
+      //   only to kill side gaps — no vertical crop, HUD stays put.
+      // - Desktop / landscape: uniform contain, letterbox.
+      const designAspect = BASE_W / BASE_H;          // 0.5
+      const viewAspect = vw / vh;
+      const aspectDelta = Math.abs(viewAspect - designAspect) / designAspect;
 
-      // Center game; extra space is dark surround.
-      const left = (vw - renderedW) / 2;
-      const top = (vh - renderedH) / 2;
+      let scaleX, scaleY, left, top;
+      if (aspectDelta < 0.18) {
+        // Extend left/right only; keep full vertical design on screen
+        scaleY = vh / BASE_H;
+        scaleX = vw / BASE_W;
+        left = 0;
+        top = 0;
+      } else {
+        const scale = Math.min(vw / BASE_W, vh / BASE_H);
+        scaleX = scaleY = scale;
+        left = (vw - BASE_W * scale) / 2;
+        top = (vh - BASE_H * scale) / 2;
+      }
 
-      designEl.style.transform = `translate3d(${left.toFixed(2)}px,${top.toFixed(2)}px,0) scale(${scale.toFixed(6)})`;
+      designEl.style.transform = `translate3d(${left.toFixed(2)}px,${top.toFixed(2)}px,0) scale(${scaleX.toFixed(6)}, ${scaleY.toFixed(6)})`;
       State.W = BASE_W;
       State.H = BASE_H;
       computeGeo();
